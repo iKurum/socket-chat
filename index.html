@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<title>Socket.IO chat</title>
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+		}
+
+		body {
+			font: 13px Helvetica, Arial;
+		}
+
+		#box,
+		#join {
+			width: 60%;
+			height: 400px;
+			position: absolute;
+			left: 20%;
+			top: 3rem;
+			background-color: #ccc;
+		}
+
+		#join {
+			text-align: center;
+			z-index: 9999;
+		}
+
+		#form {
+			background: #000;
+			padding: 10px;
+			position: absolute;
+			bottom: 0;
+			width: 97%;
+		}
+
+		.sendMsg {
+			border: 0;
+			padding: 10px;
+			width: 87%;
+			margin-right: .5%;
+		}
+
+		.sendName {
+			border: 3px #000 solid;
+			margin: 10rem auto;
+			width: 10rem;
+			height: 2rem;
+			font-size: 1rem;
+		}
+
+		.btn_send {
+			width: 9%;
+			background: rgb(130, 224, 255);
+			border: none;
+			padding: 10px;
+		}
+
+		.btn_join {
+			border: 2px #000 solid;
+			background: rgb(130, 224, 255);
+			padding: 8px 10px;
+		}
+
+		#content {
+			list-style-type: none;
+			margin: 0;
+			padding: 0;
+		}
+
+		#content li {
+			padding: 5px 10px;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="join">
+		<input class="sendName" type="text" maxlength="6" placeholder="输入名字..." />
+		<button class="btn_join">进入</button>
+	</div>
+	<div id="box">
+		<ul id="content"></ul>
+		<div id="form">
+			<input class="sendMsg" autocomplete="off" />
+			<button class="btn_send">发送</button>
+		</div>
+	</div>
+
+	<script src="/socket.io/socket.io.js"></script>
+	<script>
+		const socket = io();
+		const sendName = document.getElementsByClassName("sendName")[0];
+		const btn_join = document.getElementsByClassName("btn_join")[0];
+		const content = document.getElementById("content");
+		const sendMsg = document.getElementsByClassName("sendMsg")[0];
+		const btn_send = document.getElementsByClassName("btn_send")[0];
+
+		let name = null;
+		//加入
+		btn_join.addEventListener('click', () => {
+			name = sendName.value;
+			if (name) {
+				socket.emit('login', {
+					user_name: name
+				});
+			} else {
+				alert('请输入昵称...');
+			}
+		});
+
+		//登陆成功
+		socket.on('loginSuccess', (data) => {
+			if (data.user_name == name) {
+				document.getElementById("join").style.display = 'none';
+			} else {
+				alert('用户名不匹配');
+			}
+		});
+
+		//登陆失败
+		socket.on('loginFalse', () => {
+			alert('昵称重复');
+		});
+
+		//新人加入
+		socket.on('add', (data) => {
+			let addLi = document.createElement('li');
+			addLi.style.textAlign = 'center';
+			addLi.style.backgroundColor = '#eee';
+			addLi.innerHTML = '<p>系统消息：' + data.user_name + ' 加入群聊</p>';
+			content.appendChild(addLi);
+		});
+
+		//退出
+		socket.on('leave', (userName) => {
+			let leaveLi = document.createElement('li');
+			leaveLi.style.textAlign = 'center';
+			leaveLi.style.backgroundColor = '#eee';
+			leaveLi.innerHTML = '<p>系统消息： ' + userName + ' 退出群聊 </p>';
+			content.appendChild(leaveLi);
+		});
+
+		//发送消息 
+		btn_send.addEventListener('click', () => {
+			let data = {
+				id: '',
+				msg: sendMsg.value
+			};
+			socket.emit('sendMsg', data);
+			sendMsg.value = "";
+		});
+
+		//展示消息
+		socket.on('receiveMsg', (data) => {
+			let msgLi = document.createElement('li');
+			if (data.id != name) {
+				msgLi.style.textAlign = 'left';
+ 				msgLi.innerHTML = data.id + '<span style="margin:8px;padding:6px 30px;border:1px solid #a1a1a1;border-radius:25px;">' + data.msg +
+					'</span>';
+			} else {
+				msgLi.style.textAlign = 'right';
+				msgLi.innerHTML = '<span style="margin:8px;padding:6px 30px;border:1px solid #a1a1a1;border-radius:25px;">' + data.msg + '</span>' + data.id;
+			}
+			content.appendChild(msgLi);
+		});
+	</script>
+</body>
+
+</html>
